@@ -1,11 +1,20 @@
 package com.example.hackathon.service;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
+import com.example.hackathon.dto.Feature;
+import com.example.hackathon.dto.request.RequestToOpenAI;
+import com.example.hackathon.dto.request.Transcript;
+import com.example.hackathon.dto.response.ResponseFromOpenAI;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.http.HttpHeaders;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
 @Service
 public class SuggestFeatureServiceImpl implements SuggestFeatureService{
@@ -13,8 +22,14 @@ public class SuggestFeatureServiceImpl implements SuggestFeatureService{
     private final String openaiApiUrl = "https://api.openai.com/v1/chat/completions";
     private final String openaiApiKey = "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";
     private final String openaiModel = "gpt-3.5-turbo";
-
     private final RestTemplate restTemplate;
+    private ObjectMapper objectMapper = new ObjectMapper();
+
+    private static final List<Feature> FEATURES_LIST = Arrays.asList(
+        new Feature("whiteboard", "WhiteBoard", "Online whiteboard solution for modern collaboration which enables in-person and remote teams can ideate and brainstorming the system designing/architecture."),
+        new Feature("poll_feature", "Poll Feature", "The Poll feature is designed to enhance communication and decision-making during video conferencing sessions or telephone conversations. With this feature, participants can create and conduct polls in real-time to gather opinions, feedback, and preferences from other participants."),
+        new Feature("breakout_rooms", "Breakout Rooms", "Breakout Rooms are a versatile feature designed to facilitate focused discussions, collaboration, and brainstorming sessions within larger video conferencing meetings. They enable participants to split into smaller groups, each with its own virtual space, to engage in specific topics, tasks, or discussions.")
+    );
 
     @Autowired
     public SuggestFeatureServiceImpl (RestTemplate restTemplate) {
@@ -22,58 +37,65 @@ public class SuggestFeatureServiceImpl implements SuggestFeatureService{
     }
 
     @Override
-    public String getSuggestedFeature(String transcriptionSnippet) {
-        String features = "1. Whiteboard: Helps in creating/designing architecture diagrams.\n" +
-            "2. Polls: Helps moderator to create a poll with predefined options, to come to a decision fast.";
+    public String getSuggestedFeature(List<Transcript> transcriptions) {
 
-        OpenAiRequest request = new OpenAiRequest(openaiModel, features, transcriptionSnippet);
+        RequestToOpenAI requestToOpenAI = null;
+        try {
+            requestToOpenAI = new RequestToOpenAI(openaiModel, FEATURES_LIST, transcriptions);
+        } catch (JsonProcessingException e) {
+            return "Error occurred while parsing the content: " + e.getMessage();
+        }
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.setBearerAuth(openaiApiKey);
 
-        HttpEntity<OpenAiRequest> entity = new HttpEntity<>(request, headers);
+        HttpEntity<RequestToOpenAI> entity = new HttpEntity<>(requestToOpenAI, headers);
 
         ResponseEntity<String> response = restTemplate.exchange(openaiApiUrl, HttpMethod.POST, entity, String.class);
+
+        String content = extractContentFromResponse(response.getBody());
+
+        String features = extractFeatures(content);
+
         if (response.getStatusCode() == HttpStatus.OK) {
-            return response.getBody();
+            return features;
         } else {
-            // Handle error response
-            return "Error: " + response.getStatusCodeValue();
+            return content;
         }
     }
 
-    // Inner class to represent the structure of the request body
-    private static class OpenAiRequest {
-
-        @JsonProperty("model")
-        private String model;
-
-        @JsonProperty("messages")
-        private OpenAiMessage[] messages;
-
-        public OpenAiRequest(String model, String features, String transcriptionSnippet) {
-            this.model = model;
-            this.messages = new OpenAiMessage[] {
-                new OpenAiMessage("user", features),
-                new OpenAiMessage("user", "Transcription Snippet: \"" + transcriptionSnippet + "\""),
-                new OpenAiMessage("user", "Please suggest if we can use any of the above feature based on the transcript provided either to ease current description or next steps. Response should be max two liner without mentioning transcript. Output should be in format: [{suggested feature, suggestion}]")
-            };
+    private String extractContentFromResponse(String jsonResponse) {
+        ResponseFromOpenAI responseFromOpenAI = null;
+        try {
+            responseFromOpenAI = objectMapper.readValue(jsonResponse, ResponseFromOpenAI.class);
+            if (responseFromOpenAI != null && responseFromOpenAI.getChoices() != null && responseFromOpenAI.getChoices().length > 0 && responseFromOpenAI.getChoices()[0].getMessage()!= null) {
+                return responseFromOpenAI.getChoices()[0].getMessage().getContent();
+            }
+        } catch (Exception e) {
+            return e.toString();
         }
+        return jsonResponse;
     }
 
-    // Inner class to represent the structure of each message
-    private static class OpenAiMessage {
+    private String extractFeatures(String content) {
+        List<Feature> features = new ArrayList<>();
+        try {
+            String[] lines = content.split("\\n");
+            for (String line : lines) {
+                String[] parts = line.split(": ");
+                if (parts.length == 3) {
+                    String featureId = parts[0].trim();
+                    String featureName = parts[1].trim();
+                    String description = parts[2].trim();
+                    features.add(new Feature(featureId, featureName, description));
+                }
+            }
 
-        @JsonProperty("role")
-        private String role;
-
-        @JsonProperty("content")
-        private String content;
-
-        public OpenAiMessage(String role, String content) {
-            this.role = role;
-            this.content = content;
+            return objectMapper.writeValueAsString(features);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return "Error occurred while parsing the content: " + e.getMessage();
         }
     }
 }

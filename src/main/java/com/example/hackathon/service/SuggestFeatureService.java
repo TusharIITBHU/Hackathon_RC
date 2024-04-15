@@ -1,7 +1,9 @@
 package com.example.hackathon.service;
 
-public interface SuggestFeatureService {
+import com.example.hackathon.dto.request.Transcript;
+import java.util.List;
 
-    String getSuggestedFeature(String transcriptionSnippet);
+public interface SuggestFeatureService {
+    String getSuggestedFeature(List<Transcript> transcriptions);
 
 }
