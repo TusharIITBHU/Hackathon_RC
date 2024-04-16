@@ -26,9 +26,11 @@ public class RequestToOpenAI {
         String featureString = objectMapper.writeValueAsString(features);
         String transcriptionString = objectMapper.writeValueAsString(transcriptions);
 
-        this.messages.add(new MessageToOpenAI("user", featureString));
-        this.messages.add(new MessageToOpenAI("user", "Transcript: \"" + transcriptionString + "\""));
-        this.messages.add(new MessageToOpenAI("user", "Please suggest if we can use any of the above feature based on the transcript provided either to ease current description or next steps. Response should be max five liner without mentioning transcript or user sensitive info. Output should be in format -> featureId : featureName : description of feature"));
+        this.messages.add(new MessageToOpenAI("user", "Hi. You are my assistant"));
+        this.messages.add(new MessageToOpenAI("user", "These are the tools available during a meeting: " + featureString));
+        this.messages.add(new MessageToOpenAI("user", "This is transcript from a meeting which is currently going on. Based on the context of the discussion, can you suggest any tool mentioned above which will be useful for the meeting participant in the current meeting or the upcoming meetings on the same discussion topic."));
+        this.messages.add(new MessageToOpenAI("user", transcriptionString));
+        this.messages.add(new MessageToOpenAI("user", "Suggestion should be in format -> featureId : featureName: suggestion text. Suggestion text should not look like its based on the transcript provided. It should be a one liner. Please suggest the most useful tool. Suggest a tool only once during the meeting"));
     }
 
     public String getModel() {

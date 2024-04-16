@@ -57,12 +57,10 @@ public class SuggestFeatureServiceImpl implements SuggestFeatureService{
 
         String content = extractContentFromResponse(response.getBody());
 
-        String features = extractFeatures(content);
-
         if (response.getStatusCode() == HttpStatus.OK) {
-            return features;
+            return content;
         } else {
-            return "OpenAI API returned response: " + content;
+            return "OpenAI API returned response: " + response;
         }
     }
 
@@ -71,12 +69,14 @@ public class SuggestFeatureServiceImpl implements SuggestFeatureService{
         try {
             responseFromOpenAI = objectMapper.readValue(jsonResponse, ResponseFromOpenAI.class);
             if (responseFromOpenAI != null && responseFromOpenAI.getChoices() != null && responseFromOpenAI.getChoices().length > 0 && responseFromOpenAI.getChoices()[0].getMessage()!= null) {
-                return responseFromOpenAI.getChoices()[0].getMessage().getContent();
+                return extractFeatures(responseFromOpenAI.getChoices()[0].getMessage().getContent());
+            }
+            else {
+                return responseFromOpenAI.toString();
             }
         } catch (Exception e) {
             return "Error parsing OpenAI response: " + e.getMessage();
         }
-        return jsonResponse;
     }
 
     private String extractFeatures(String content) {
