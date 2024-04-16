@@ -1,5 +1,6 @@
 package com.example.hackathon.controller;
 
+import com.example.hackathon.dto.request.RequestBodyWithKey;
 import com.example.hackathon.dto.request.Transcript;
 import com.example.hackathon.service.SuggestFeatureServiceImpl;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,8 +25,8 @@ public class SuggestFeatureController {
     }
 
     @PostMapping("/suggestFeature")
-    public ResponseEntity<String> processTest(@RequestBody List<Transcript> transcriptions) {
-        String suggestedFeature = service.getSuggestedFeature(transcriptions);
+    public ResponseEntity<String> processTest(@RequestBody RequestBodyWithKey requestBodyWithKey) {
+        String suggestedFeature = service.getSuggestedFeature(requestBodyWithKey);
         return new ResponseEntity<>(suggestedFeature, HttpStatus.OK);
     }
 
