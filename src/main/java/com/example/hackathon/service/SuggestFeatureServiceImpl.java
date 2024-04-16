@@ -19,9 +19,9 @@ import java.util.List;
 @Service
 public class SuggestFeatureServiceImpl implements SuggestFeatureService{
 
-    private final String openaiApiUrl = "https://api.openai.com/v1/chat/completions";
-    private final String openaiApiKey = "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";
-    private final String openaiModel = "gpt-3.5-turbo";
+    private final String OPENAI_API_URL = "https://api.openai.com/v1/chat/completions";
+    private final String OPENAI_API_KEY = "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";
+    private final String OPENAI_MODEL = "gpt-3.5-turbo";
     private final RestTemplate restTemplate;
     private ObjectMapper objectMapper = new ObjectMapper();
 
@@ -41,18 +41,18 @@ public class SuggestFeatureServiceImpl implements SuggestFeatureService{
 
         RequestToOpenAI requestToOpenAI = null;
         try {
-            requestToOpenAI = new RequestToOpenAI(openaiModel, FEATURES_LIST, transcriptions);
+            requestToOpenAI = new RequestToOpenAI(OPENAI_MODEL, FEATURES_LIST, transcriptions);
         } catch (JsonProcessingException e) {
             return "Error occurred while parsing the content: " + e.getMessage();
         }
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
-        headers.setBearerAuth(openaiApiKey);
+        headers.setBearerAuth(OPENAI_API_KEY);
 
         HttpEntity<RequestToOpenAI> entity = new HttpEntity<>(requestToOpenAI, headers);
 
-        ResponseEntity<String> response = restTemplate.exchange(openaiApiUrl, HttpMethod.POST, entity, String.class);
+        ResponseEntity<String> response = restTemplate.exchange(OPENAI_API_URL, HttpMethod.POST, entity, String.class);
 
         String content = extractContentFromResponse(response.getBody());
 
